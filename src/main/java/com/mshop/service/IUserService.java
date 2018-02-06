@@ -1,10 +1,14 @@
 package com.mshop.service;
 
 import com.mshop.common.ServerResponse;
+import com.mshop.po.Session;
 import com.mshop.po.User;
+import com.mshop.vo.UserSession;
+
+import javax.servlet.http.HttpSession;
 
 public interface IUserService {
-    ServerResponse<User> login(String username, String password);
+    ServerResponse<UserSession> login(String username, String password, HttpSession session);
 
     ServerResponse<String> register(User user);
 
@@ -18,8 +22,9 @@ public interface IUserService {
 
     ServerResponse<String> resetPassword(String oldPassword, String newPassword, User user);
 
-    ServerResponse<User> updateInformation(User user);
+    ServerResponse<User> updateInformation(User user, Session session);
 
     ServerResponse checkAnimRole(User user);
+
 
 }

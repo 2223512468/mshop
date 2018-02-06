@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 
-@Service
+@Service("iCategoryService")
 public class CategoryServiceImpl implements ICategoryService {
 
     private Logger logger = LoggerFactory.getLogger(CategoryServiceImpl.class);

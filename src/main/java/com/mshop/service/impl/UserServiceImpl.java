@@ -3,24 +3,30 @@ package com.mshop.service.impl;
 import com.mshop.common.Const;
 import com.mshop.common.ServerResponse;
 import com.mshop.common.TokenCache;
+import com.mshop.dao.SessionMapper;
 import com.mshop.dao.UserMapper;
+import com.mshop.po.Session;
 import com.mshop.po.User;
 import com.mshop.service.IUserService;
 import com.mshop.utils.MD5Util;
+import com.mshop.vo.UserSession;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpSession;
 import java.util.UUID;
 
-@Service
+@Service("iUserService")
 public class UserServiceImpl implements IUserService {
 
     @Autowired
-    UserMapper userMapper;
+    private UserMapper userMapper;
+    @Autowired
+    private SessionMapper sessionMapper;
 
     @Override
-    public ServerResponse<User> login(String username, String password) {
+    public ServerResponse<UserSession> login(String username, String password, HttpSession reqSession) {
         int resultCode = userMapper.checkUserName(username);
         if (resultCode == 0) {
             return ServerResponse.createByErrorMessage("用户名不存在");
@@ -31,9 +37,30 @@ public class UserServiceImpl implements IUserService {
         if (user == null) {
             return ServerResponse.createByErrorMessage("密码错误");
         }
+
         user.setPassword(StringUtils.EMPTY);
-        return ServerResponse.createBySuccess("登录成功", user);
+        Session ssession = getSession(user);
+        if (ssession == null) {
+            Session session = new Session();
+            session.setUserId(user.getId());
+            session.setToken(reqSession.getId());
+            sessionMapper.insert(session);
+        } else {
+            resultCode = sessionMapper.updateTokenByUserId(reqSession.getId(), user.getId());
+        }
+
+        Session ssessionss = getSession(user);
+        UserSession userSession = new UserSession();
+        userSession.setSession(ssessionss);
+        userSession.setUser(user);
+
+        return ServerResponse.createBySuccess("登录成功", userSession);
     }
+
+    private Session getSession(User user) {
+        return sessionMapper.selectByUserId(user.getId());
+    }
+
 
     @Override
     public ServerResponse<String> register(User user) {
@@ -147,10 +174,15 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public ServerResponse<User> updateInformation(User user) {
+    public ServerResponse<User> updateInformation(User user, Session session) {
         int resultCode = userMapper.checkEmailByUserId(user.getEmail(), user.getId());
         if (resultCode > 0) {
             return ServerResponse.createByErrorMessage("email已经存在，请更换email再尝试更新");
+        }
+
+        Session ssession = sessionMapper.selectByUserId(user.getId());
+        if (!session.getToken().equals(ssession.getToken())) {
+            return ServerResponse.createByErrorMessage("token已过期，请重新登录");
         }
 
         User updateUser = new User();
